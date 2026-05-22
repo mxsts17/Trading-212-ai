@@ -34,39 +34,34 @@ def generate_ultimate_analysis(ticker, current, target, upside, pe, beta, div, r
     analysis = f"### 🧠 Στρατηγική & Πρόβλεψη Χρόνου\n\n"
     
     # 1. Χρόνος & Στόχος
-    analysis += f"**⏳ Ορίζοντας Επίτευξης Στόχου:** Η τιμή-στόχος των **${target:.2f}** της Wall Street έχει χρονικό ορίζοντα **12 μηνών**. "
-    if upside > 0:
-        monthly_growth = upside / 12
-        analysis += f"Για να επιτευχθεί, η **{ticker}** πρέπει να αναπτύσσεται κατά μέσο όρο **+{monthly_growth:.1f}% κάθε μήνα**.\n\n"
-    else:
-        analysis += "Οι αναλυτές περιμένουν πτώση, οπότε δεν προτείνεται αγορά (εκτός αν κάνεις short).\n\n"
+    analysis += f"**⏳ Ορίζοντας (12 Μήνες):** Για να πιάσει τον στόχο των **${target:.2f}**, η μετοχή πρέπει να αναπτύσσεται κατά μέσο όρο **+{(upside/12):.1f}% / μήνα**.\n\n"
         
     # 2. Χρόνος Διακράτησης
     analysis += "**📅 Πόσο καιρό να την κρατήσεις;** "
     if upside > 20:
-        analysis += "Αναμένεται τεράστια άνοδος. Προτείνεται **Μακροπρόθεσμη Διακράτηση (6-12 μήνες)**. Μην πανικοβληθείς στις καθημερινές αυξομειώσεις, άφησε την επένδυση να ωριμάσει.\n\n"
+        analysis += "Αναμένεται τεράστια άνοδος. Προτείνεται **Μακροπρόθεσμη Διακράτηση (6-12 μήνες)**. Άφησε την επένδυση να ωριμάσει.\n\n"
     elif upside > 8:
-        analysis += "Καλή ευκαιρία. Προτείνεται **Μεσοπρόθεσμη Διακράτηση (3-6 μήνες)**. Παρακολούθησε την τιμή όταν βγουν τα επόμενα τριμηνιαία αποτελέσματα της εταιρείας.\n\n"
+        analysis += "Καλή ευκαιρία. Προτείνεται **Μεσοπρόθεσμη Διακράτηση (3-6 μήνες)**.\n\n"
     else:
-        analysis += "Μικρό περιθώριο κέρδους. Ιδανική μόνο για **Βραχυπρόθεσμο Trading (ημέρες/εβδομάδες)** ή για να λάβεις μερίσματα.\n\n"
+        analysis += "Μικρό περιθώριο. Ιδανική μόνο για **Βραχυπρόθεσμο Trading**.\n\n"
 
     # 3. Τάση (Momentum)
     if sma50 != "N/A" and sma200 != "N/A":
         analysis += "**📈 Τεχνική Τάση (Momentum):** "
         if current > sma50 and sma50 > sma200:
-            analysis += "Η μετοχή βρίσκεται σε **Ισχυρό Ανοδικό Κανάλι**. Έχει 'φόρα' (momentum) και είναι πολύ πιθανό να φτάσει τον στόχο της **νωρίτερα από τους 12 μήνες**.\n\n"
+            analysis += "Η μετοχή βρίσκεται σε **Ισχυρό Ανοδικό Κανάλι**. Έχει 'φόρα' και είναι πολύ πιθανό να φτάσει τον στόχο της νωρίτερα!\n\n"
         elif current < sma50:
-            analysis += "Αυτή τη στιγμή η μετοχή **διορθώνει (πέφτει)** βραχυπρόθεσμα. Ίσως είναι πιο έξυπνο να περιμένεις 1-2 εβδομάδες για να την αγοράσεις σε **ακόμα πιο φθηνή τιμή**!\n\n"
+            analysis += "Αυτή τη στιγμή **διορθώνει (πέφτει)** βραχυπρόθεσμα. Ίσως είναι πιο έξυπνο να περιμένεις λίγες μέρες για να την αγοράσεις ακόμα πιο φθηνά.\n\n"
         else:
-            analysis += "Η τάση είναι ουδέτερη αυτή την περίοδο. Μαζεύει δυνάμεις.\n\n"
+            analysis += "Η τάση είναι ουδέτερη αυτή την περίοδο.\n\n"
 
     # 4. Ποιότητα & Ρίσκο
-    analysis += "**🛡️ Ποιότητα & Ασφάλεια Επένδυσης:**\n"
+    analysis += "**🛡️ Ποιότητα & Ασφάλεια:**\n"
     analysis += f"- **Μεταβλητότητα:** {get_risk_profile(beta)}. "
     if div and div != "N/A" and float(div) > 0:
-        analysis += f"\n- **Παθητικό Εισόδημα:** Η εταιρεία πληρώνει μέρισμα **{float(div)*100:.1f}%** τον χρόνο. Πληρώνεσαι απλά για να την έχεις στο χαρτοφυλάκιό σου!"
+        analysis += f"\n- **Παθητικό Εισόδημα:** Η εταιρεία σε πληρώνει **{float(div)*100:.1f}%** τον χρόνο, απλά και μόνο για να κρατάς τη μετοχή!"
     else:
-        analysis += f"\n- **Παθητικό Εισόδημα:** Δεν δίνει μέρισμα. Το κέρδος σου θα προέλθει αποκλειστικά από την άνοδο της τιμής."
+        analysis += f"\n- **Παθητικό Εισόδημα:** Δεν πληρώνει μέρισμα."
         
     return analysis
 
@@ -90,7 +85,12 @@ def fetch_opportunities(tickers):
                 if upside > 5 and ('buy' in str(rec_key).lower()):
                     data.append({
                         'Ticker': t, 'Current': current, 'Target': target,
-                        'Upside': upside, 'Rec': rec_key
+                        'Upside': upside, 'Rec': rec_key,
+                        'PE': info.get('trailingPE', "N/A"),
+                        'Beta': info.get('beta', "N/A"),
+                        'Div': info.get('dividendYield', "N/A"),
+                        'SMA50': info.get('fiftyDayAverage', "N/A"),
+                        'SMA200': info.get('twoHundredDayAverage', "N/A")
                     })
         except:
             continue
@@ -102,10 +102,16 @@ if not opp_df.empty:
     for _, row in opp_df.iterrows():
         rec_badge, _ = get_recommendation_badge(row['Rec'])
         with st.container():
-            col1, col2, col3 = st.columns([1.5, 1, 1])
-            col1.write(f"**{row['Ticker']}** | {rec_badge}")
-            col2.write(f"${row['Current']:.2f}")
-            col3.markdown(f"<span style='color:#00C853; font-weight:bold;'>+{row['Upside']:.1f}%</span>", unsafe_allow_html=True)
+            # Αλλαγή για να φαίνονται όλα όμορφα στο κινητό
+            st.markdown(f"### {row['Ticker']} | {rec_badge}")
+            st.markdown(f"**Τιμή:** ${row['Current']:.2f} &nbsp;➔&nbsp; **Στόχος:** ${row['Target']:.2f} <span style='color:#00C853; font-weight:bold;'>(+{row['Upside']:.1f}%)</span>", unsafe_allow_html=True)
+            
+            # Το αναδιπλούμενο μενού της Ανάλυσης επέστρεψε
+            with st.expander("🧠 Διάβασε την AI Ανάλυση της μετοχής"):
+                st.write(generate_ultimate_analysis(
+                    row['Ticker'], row['Current'], row['Target'], row['Upside'],
+                    row['PE'], row['Beta'], row['Div'], rec_badge, row['SMA50'], row['SMA200']
+                ))
             st.divider()
 else:
     st.info("Δεν βρέθηκαν άμεσες ευκαιρίες >5% στη βασική λίστα αυτή τη στιγμή.")
@@ -134,12 +140,11 @@ if search_ticker:
         st.markdown(f"## {info.get('longName', search_ticker)}")
         st.markdown(f"**Σύσταση:** {rec_badge}")
         
-        # Μετρικές
-        c1, c2, c3, c4 = st.columns(4)
+        # 3 Στήλες που χωράνε άνετα στο κινητό
+        c1, c2, c3 = st.columns(3)
         c1.metric("Τιμή", f"${current:.2f}")
         c2.metric("Στόχος 12m", f"${target:.2f}" if target else "N/A", f"{upside:.1f}%" if target else None)
-        c3.metric("P/E Ratio", round(pe, 2) if pe != "N/A" else "N/A")
-        c4.metric("Μέρισμα", f"{div*100:.1f}%" if div != "N/A" else "0%")
+        c3.metric("Μέρισμα", f"{div*100:.1f}%" if div != "N/A" else "0%")
 
         # Γράφημα
         hist = stock.history(period="6mo")
@@ -150,7 +155,7 @@ if search_ticker:
         if sma50 != "N/A":
             fig.add_trace(go.Scatter(x=hist.index, y=hist['Close'].rolling(window=20).mean(), line=dict(color='orange', width=1.5), name="Τάση 20 ημερών"))
             
-        fig.update_layout(title="Πορεία Τιμής (Τελευταίοι 6 μήνες)", margin=dict(l=0, r=0, t=40, b=0), height=300, template="plotly_dark")
+        fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=300, template="plotly_dark")
         st.plotly_chart(fig, use_container_width=True)
         
         # AI Report
