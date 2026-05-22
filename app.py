@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # Ρύθμιση για Mobile οθόνες
-st.set_page_config(page_title="Trading 212 AI Assistant", page_icon="📈", layout="vertical")
+st.set_page_config(page_title="Trading 212 AI Assistant", page_icon="📈", layout="centered")
 
 st.title("📈 Trading 212 AI Assistant")
 st.write("Ο προσωπικός σου σύμβουλος για μετοχές σε πραγματικό χρόνο.")
