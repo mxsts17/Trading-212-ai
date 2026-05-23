@@ -31,7 +31,7 @@ st.markdown("""
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg", width=50)
     st.markdown("### 🧠 AI Quant Settings")
-    gemini_key = st.text_input("Gemini API Key:", type="password", help="Βάλε εδώ το δωρεάν Google Gemini API Key σου για την ανάλυση στο Deep Dive.")
+    gemini_key = st.text_input("Gemini API Key:", type="password", help="AIzaSyBBJTL7fOf8va-cjxaMBo7Ke6zwG5u-BRY")
     if gemini_key:
         genai.configure(api_key=gemini_key)
         st.success("✅ AI Engine Online")
