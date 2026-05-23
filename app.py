@@ -8,11 +8,10 @@ st.set_page_config(page_title="Trading 212 AI Pro", page_icon="📊", layout="ce
 
 st.markdown("""
     <h1 style='text-align: center; color: #00C853;'>📊 Trading 212 AI Analytics</h1>
-    <p style='text-align: center; font-size: 15px; color: #aaa;'>Revolut-Style Δείκτες, Αναλύσεις Οίκων & Top 3 Ευκαιρίες</p>
+    <p style='text-align: center; font-size: 15px; color: #aaa;'>Deep Fundamental Analysis & Wall Street Targets</p>
     <hr style='margin-bottom: 25px;'>
 """, unsafe_allow_html=True)
 
-# Custom Σύστημα για τη Μπάρα της Revolut
 def draw_revolut_gauge(mean_score):
     if not mean_score or mean_score == "N/A" or mean_score == 0:
         return "<p style='color:#888;'>⚪ Ο δείκτης δεν είναι διαθέσιμος.</p>"
@@ -44,31 +43,60 @@ def draw_revolut_gauge(mean_score):
     """
     return html
 
-def generate_ultimate_analysis(ticker, current, target, upside, pe, beta, div, rec_badge, sma50, target_high, target_low):
-    analysis = f"**⏳ Ορίζοντας Τιμής (12 Μήνες):** Χρειάζεται μέση άνοδο περίπου **+{(upside/12):.1f}% ανά μήνα**.\n\n"
+# --- ΝΕΑ ΣΥΝΑΡΤΗΣΗ: DEEP AI ANALYSIS ---
+def generate_deep_analysis(info, current):
+    # Δεδομένα Αναλυτών
+    target_high = info.get('targetHighPrice')
+    target_mean = info.get('targetMeanPrice')
+    target_low = info.get('targetLowPrice')
     
-    analysis += "**📅 Πλάνο Διακράτησης:** "
-    if upside > 20:
-        analysis += "Προτείνεται **Μακροπρόθεσμη Διακράτηση (6-12 μήνες)**. Μην επηρεάζεσαι από τις καθημερινές μικρο-διορθώσεις.\n\n"
-    elif upside > 8:
-        analysis += "Ιδανική για **Μεσοπρόθεσμη Διακράτηση (3-6 μήνες)**.\n\n"
-    else:
-        analysis += "Κατάλληλη κυρίως για **Βραχυπρόθεσμο Trading**.\n\n"
-
-    if target_high and target_low:
-        analysis += f"**🎯 Εκτιμήσεις Μεγάλων Οίκων:**\n"
-        analysis += f"- **Αισιόδοξο (High):** Έως **${target_high:.2f}**.\n"
-        analysis += f"- **Απαισιόδοξο (Low):** Πτώση έως **${target_low:.2f}**.\n\n"
-
-    if div and div != "N/A" and float(div) > 0:
-        analysis += f"💰 **Παθητικό Εισόδημα:** Μέρισμα **{float(div)*100:.1f}%** ετησίως."
+    # Θεμελιώδη
+    rev_growth = info.get('revenueGrowth', 0)
+    profit_margin = info.get('profitMargins', 0)
+    fwd_pe = info.get('forwardPE', 'N/A')
+    
+    analysis = "### 🧠 Βαθιά Ανάλυση (Fundamental & Targets)\n\n"
+    
+    # 1. Στόχοι Αναλυτών (Wall Street Consensus)
+    analysis += "**🎯 Τιμές-Στόχοι (Επόμενοι 12 Μήνες):**\n"
+    if target_high and target_mean and target_low:
+        high_upside = ((target_high - current) / current) * 100
+        mean_upside = ((target_mean - current) / current) * 100
+        low_upside = ((target_low - current) / current) * 100
         
+        analysis += f"* 🟢 **Αισιόδοξο (High):** ${target_high:.2f} ({'+' if high_upside > 0 else ''}{high_upside:.1f}%)\n"
+        analysis += f"* 🟡 **Μέσο (Average):** ${target_mean:.2f} ({'+' if mean_upside > 0 else ''}{mean_upside:.1f}%)\n"
+        analysis += f"* 🔴 **Απαισιόδοξο (Low):** ${target_low:.2f} ({'+' if low_upside > 0 else ''}{low_upside:.1f}%)\n\n"
+    else:
+        analysis += "*Δεν υπάρχουν επαρκή δεδομένα αναλυτών για αυτή τη μετοχή.*\n\n"
+
+    # 2. Αξιολόγηση Θεμελιωδών (Growth & Profitability)
+    analysis += "**🏢 Υγεία Εταιρείας (Fundamentals):**\n"
+    
+    if rev_growth and rev_growth != "N/A":
+        growth_pct = float(rev_growth) * 100
+        if growth_pct > 20:
+            analysis += f"* 🚀 **Ανάπτυξη:** Τρομερή αύξηση εσόδων κατά **{growth_pct:.1f}%**. Η εταιρεία αναπτύσσεται επιθετικά (Growth status).\n"
+        elif growth_pct > 0:
+            analysis += f"* 📈 **Ανάπτυξη:** Σταθερή αύξηση εσόδων κατά **{growth_pct:.1f}%**.\n"
+        else:
+            analysis += f"* ⚠️ **Ανάπτυξη:** Προσοχή, τα έσοδα συρρικνώνονται κατά **{growth_pct:.1f}%**.\n"
+            
+    if profit_margin and profit_margin != "N/A":
+        margin_pct = float(profit_margin) * 100
+        if margin_pct > 20:
+            analysis += f"* 💰 **Κερδοφορία:** Εξαιρετικό περιθώριο κέρδους **{margin_pct:.1f}%**. Η εταιρεία 'τυπώνει' χρήμα (High cash flow potential).\n"
+        elif margin_pct > 0:
+            analysis += f"* 💵 **Κερδοφορία:** Θετικό περιθώριο κέρδους **{margin_pct:.1f}%**. Η εταιρεία είναι βιώσιμη.\n"
+        else:
+            analysis += f"* 🩸 **Κερδοφορία:** Η εταιρεία αυτή τη στιγμή 'καίει' μετρητά (Περιθώριο: **{margin_pct:.1f}%**). Συνηθισμένο σε startups/high-growth, αλλά αυξάνει το ρίσκο.\n"
+
     return analysis
 
 # --- Το δίκτυο μετοχών μας ---
 ticker_pool = {
     "Mega": ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD', 'NFLX', 'DIS', 'NKE', 'PFE'],
-    "MidSmall": ['PLTR', 'SOFI', 'HOOD', 'RIVN', 'LCID', 'DKNG', 'U', 'PINS', 'SNAP', 'UPST', 'AFRM', 'CLOV'],
+    "MidSmall": ['PLTR', 'SOFI', 'HOOD', 'RIVN', 'NU', 'S', 'DKNG', 'U', 'PINS', 'SNAP', 'UPST', 'AFRM'],
     "CryptoEV": ['COIN', 'MARA', 'RIOT', 'CLSK', 'NIO', 'XPEV', 'LI', 'PLUG', 'FCEL', 'BLINK', 'BABA', 'JD']
 }
 
@@ -87,93 +115,56 @@ def run_scan(tickers):
                 upside = ((target - current) / current) * 100
                 data.append({
                     'Ticker': t, 'Current': current, 'Target': target, 'Upside': upside,
-                    'MeanScore': mean_score, 'Summary': info.get('longBusinessSummary', ''),
-                    'Sector': info.get('sector', 'N/A'), 'Industry': info.get('industry', 'N/A'),
-                    'High': info.get('targetHighPrice'), 'Low': info.get('targetLowPrice'),
-                    'PE': info.get('trailingPE', "N/A"), 'Beta': info.get('beta', "N/A"),
-                    'Div': info.get('dividendYield', "N/A"), 'SMA50': info.get('fiftyDayAverage', "N/A")
+                    'MeanScore': mean_score, 'Info': info
                 })
         except:
             continue
     return pd.DataFrame(data)
 
 # --- 2. ΚΟΥΜΠΙ TOP 3 ΕΠΙΛΟΓΩΝ ---
-st.subheader("🏆 Αυτόματη Ανάλυση AI")
+st.subheader("🏆 Το Top 3 της Ημέρας (Βάσει Αναλυτών)")
 if st.button("Εμφάνισε τις Top 3 Ευκαιρίες Τώρα!", use_container_width=True):
-    with st.spinner("Σάρωση σε όλη την αγορά (αναζήτηση για Strong Buy)..."):
+    with st.spinner("Σάρωση σε όλη την αγορά..."):
         all_tickers = ticker_pool["Mega"] + ticker_pool["MidSmall"] + ticker_pool["CryptoEV"]
         df_all = run_scan(all_tickers)
         
-        # Φιλτράρισμα: Κρατάμε μόνο όσες έχουν σκορ (MeanScore) <= 2.5 (Δηλαδή Buy & Strong Buy)
         df_all['ScoreNum'] = pd.to_numeric(df_all['MeanScore'], errors='coerce')
         top3_df = df_all[(df_all['ScoreNum'] > 0) & (df_all['ScoreNum'] <= 2.5)].sort_values(by='Upside', ascending=False).head(3)
         
         if not top3_df.empty:
             medals = ['🥇', '🥈', '🥉']
-            st.markdown("### Οι 3 καλύτερες επιλογές αυτή τη στιγμή:")
             for i, row in top3_df.reset_index(drop=True).iterrows():
                 with st.container():
                     st.markdown(f"## {medals[i]} #{i+1}: {row['Ticker']}")
                     st.markdown(f"**Τιμή:** ${row['Current']:.2f} &nbsp;➔&nbsp; **Στόχος:** ${row['Target']:.2f} <span style='color:#00C853; font-weight:bold; font-size:18px;'>(+{row['Upside']:.1f}%)</span>", unsafe_allow_html=True)
                     st.markdown(draw_revolut_gauge(row['MeanScore']), unsafe_allow_html=True)
+                    
+                    # Αναδιπλούμενο μενού για τη βαθιά ανάλυση στο Top 3
+                    with st.expander("Δες την Βαθιά Ανάλυση & Τιμές-Στόχους"):
+                         st.markdown(generate_deep_analysis(row['Info'], row['Current']))
                     st.divider()
-        else:
-            st.warning("Αυτή τη στιγμή δεν βρέθηκαν 3 μετοχές που να πληρούν τα αυστηρά κριτήρια του 'Strong Buy'.")
 
 st.divider()
 
-# --- 3. ΕΞΥΠΝΟ ΣΚΑΝΕΡ ΑΝΑ ΚΑΤΗΓΟΡΙΑ ---
-st.subheader("📡 Σαρωτής Αγοράς")
-scanner_mode = st.selectbox("Επίλεξε Κατηγορία:", [
-    "Όλες οι Μετοχές (Full Scan)", 
-    "Mega-Cap Γίγαντες", 
-    "Mid & Small-Caps / Hidden Gems",
-    "Υψηλό Ρίσκο & Crypto / EV"
-])
-
-if "Full Scan" in scanner_mode: selected_tickers = ticker_pool["Mega"] + ticker_pool["MidSmall"] + ticker_pool["CryptoEV"]
-elif "Mega-Cap" in scanner_mode: selected_tickers = ticker_pool["Mega"]
-elif "Mid & Small-Caps" in scanner_mode: selected_tickers = ticker_pool["MidSmall"]
-else: selected_tickers = ticker_pool["CryptoEV"]
-
-with st.spinner("Φόρτωση λίστας..."):
-    opp_df = run_scan(selected_tickers)
-
-# Δείχνει μόνο αυτές με κέρδος > 3%
-if not opp_df.empty:
-    opp_df = opp_df[opp_df['Upside'] > 3].sort_values(by='Upside', ascending=False)
-    for _, row in opp_df.iterrows():
-        with st.expander(f"{row['Ticker']} | Κέρδος: +{row['Upside']:.1f}%"):
-            st.markdown(f"**Τιμή:** ${row['Current']:.2f} &nbsp;➔&nbsp; **Μέσος Στόχος:** ${row['Target']:.2f}", unsafe_allow_html=True)
-            st.markdown(draw_revolut_gauge(row['MeanScore']), unsafe_allow_html=True)
-            st.write(generate_ultimate_analysis(
-                row['Ticker'], row['Current'], row['Target'], row['Upside'],
-                row['PE'], row['Beta'], row['Div'], "", row['SMA50'], row['High'], row['Low']
-            ))
-else:
-    st.info("Δεν βρέθηκαν άμεσες ευκαιρίες στη συγκεκριμένη κατηγορία.")
-
-# --- 4. ΑΤΟΜΙΚΗ ΑΝΑΖΗΤΗΣΗ ΜΕΤΟΧΗΣ ---
-st.subheader("🔍 Χειροκίνητη Αναζήτηση")
-search_ticker = st.text_input("Πληκτρολόγησε οποιοδήποτε σύμβολο (π.χ. SOFI, INTC, TSLA):").upper().strip()
+# --- 3. ΑΤΟΜΙΚΗ ΑΝΑΖΗΤΗΣΗ (DEEP DIVE) ---
+st.subheader("🔍 Χειροκίνητη Αναζήτηση (Deep Dive)")
+search_ticker = st.text_input("Πληκτρολόγησε σύμβολο για πλήρη ανάλυση (π.χ. NU, SOFI, S):").upper().strip()
 
 if search_ticker:
     try:
-        with st.spinner("Ανάλυση..."):
+        with st.spinner("Άντληση Θεμελιωδών και Αναλύσεων Wall Street..."):
             stock = yf.Ticker(search_ticker)
             info = stock.info
             
             current = info.get('currentPrice', info.get('regularMarketPrice', 0))
-            target = info.get('targetMedianPrice', 0)
-            upside = ((target - current) / current) * 100 if current > 0 and target > 0 else 0
             mean_score = info.get('recommendationMean', "N/A")
             
             st.markdown(f"## {info.get('longName', search_ticker)}")
             
             c1, c2, c3 = st.columns(3)
             c1.metric("Τρέχουσα Τιμή", f"${current:.2f}")
-            c2.metric("Στόχος 12m", f"${target:.2f}" if target else "N/A", f"+{upside:.1f}%" if target else None)
-            c3.metric("Μέρισμα", f"{info.get('dividendYield', 0)*100:.1f}%" if info.get('dividendYield') else "0%")
+            c2.metric("P/E (Forward)", f"{info.get('forwardPE', 'N/A'):.1f}" if type(info.get('forwardPE')) in [int, float] else "N/A")
+            c3.metric("Χρηματιστηριακή Αξία", f"${info.get('marketCap', 0) / 1e9:.2f}B")
             
             st.markdown(draw_revolut_gauge(mean_score), unsafe_allow_html=True)
             
@@ -182,11 +173,8 @@ if search_ticker:
             fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=280, template="plotly_dark")
             st.plotly_chart(fig, use_container_width=True)
             
-            st.info(generate_ultimate_analysis(
-                search_ticker, current, target, upside, info.get('trailingPE'),
-                info.get('beta'), info.get('dividendYield'), "", info.get('fiftyDayAverage'),
-                info.get('targetHighPrice'), info.get('targetLowPrice')
-            ))
+            # Εδώ τυπώνεται η νέα, έξυπνη ανάλυση
+            st.info(generate_deep_analysis(info, current))
     except:
-        st.error("Δεν βρέθηκαν δεδομένα. Σιγουρέψου ότι έγραψες σωστά το σύμβολο (π.χ. AAPL).")
-                                      
+        st.error("Δεν βρέθηκαν δεδομένα. Σιγουρέψου ότι έγραψες σωστά το σύμβολο.")
+        
