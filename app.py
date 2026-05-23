@@ -128,23 +128,30 @@ if st.button("Εμφάνισε τις Top 3 Ευκαιρίες Τώρα!", use_c
         all_tickers = ticker_pool["Mega"] + ticker_pool["MidSmall"] + ticker_pool["CryptoEV"]
         df_all = run_scan(all_tickers)
         
-        df_all['ScoreNum'] = pd.to_numeric(df_all['MeanScore'], errors='coerce')
-        top3_df = df_all[(df_all['ScoreNum'] > 0) & (df_all['ScoreNum'] <= 2.5)].sort_values(by='Upside', ascending=False).head(3)
-        
-        if not top3_df.empty:
-            medals = ['🥇', '🥈', '🥉']
-            for i, row in top3_df.reset_index(drop=True).iterrows():
-                with st.container():
-                    st.markdown(f"## {medals[i]} #{i+1}: {row['Ticker']}")
-                    st.markdown(f"**Τιμή:** ${row['Current']:.2f} &nbsp;➔&nbsp; **Στόχος:** ${row['Target']:.2f} <span style='color:#00C853; font-weight:bold; font-size:18px;'>(+{row['Upside']:.1f}%)</span>", unsafe_allow_html=True)
-                    st.markdown(draw_revolut_gauge(row['MeanScore']), unsafe_allow_html=True)
-                    
-                    # Αναδιπλούμενο μενού για τη βαθιά ανάλυση στο Top 3
-                    with st.expander("Δες την Βαθιά Ανάλυση & Τιμές-Στόχους"):
-                         st.markdown(generate_deep_analysis(row['Info'], row['Current']))
-                    st.divider()
+        # ΠΡΟΣΘΗΚΗ ΑΣΦΑΛΕΙΑΣ: Ελέγχουμε αν κατέβηκαν σωστά τα δεδομένα
+        if not df_all.empty and 'MeanScore' in df_all.columns:
+            df_all['ScoreNum'] = pd.to_numeric(df_all['MeanScore'], errors='coerce')
+            top3_df = df_all[(df_all['ScoreNum'] > 0) & (df_all['ScoreNum'] <= 2.5)].sort_values(by='Upside', ascending=False).head(3)
+            
+            if not top3_df.empty:
+                medals = ['🥇', '🥈', '🥉']
+                for i, row in top3_df.reset_index(drop=True).iterrows():
+                    with st.container():
+                        st.markdown(f"## {medals[i]} #{i+1}: {row['Ticker']}")
+                        st.markdown(f"**Τιμή:** ${row['Current']:.2f} &nbsp;➔&nbsp; **Στόχος:** ${row['Target']:.2f} <span style='color:#00C853; font-weight:bold; font-size:18px;'>(+{row['Upside']:.1f}%)</span>", unsafe_allow_html=True)
+                        st.markdown(draw_revolut_gauge(row['MeanScore']), unsafe_allow_html=True)
+                        
+                        # Αναδιπλούμενο μενού για τη βαθιά ανάλυση στο Top 3
+                        with st.expander("Δες την Βαθιά Ανάλυση & Τιμές-Στόχους"):
+                             st.markdown(generate_deep_analysis(row['Info'], row['Current']))
+                        st.divider()
+            else:
+                st.info("Δεν βρέθηκαν μετοχές με σήμα 'Buy' που να πληρούν τα κριτήρια αυτή τη στιγμή.")
+        else:
+            st.error("⚠️ Προσωρινό πρόβλημα επικοινωνίας με το Yahoo Finance (δεν επέστρεψε δεδομένα). Δοκίμασε ξανά σε 1-2 λεπτά!")
 
 st.divider()
+
 
 # --- 3. ΑΤΟΜΙΚΗ ΑΝΑΖΗΤΗΣΗ (DEEP DIVE) ---
 st.subheader("🔍 Χειροκίνητη Αναζήτηση (Deep Dive)")
