@@ -2,6 +2,8 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
+import time
+import requests
 
 # --- 1. UI & ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ ---
 st.set_page_config(page_title="Trading 212 AI Pro", page_icon="📊", layout="centered")
@@ -43,21 +45,16 @@ def draw_revolut_gauge(mean_score):
     """
     return html
 
-# --- ΝΕΑ ΣΥΝΑΡΤΗΣΗ: DEEP AI ANALYSIS ---
 def generate_deep_analysis(info, current):
-    # Δεδομένα Αναλυτών
     target_high = info.get('targetHighPrice')
     target_mean = info.get('targetMeanPrice')
     target_low = info.get('targetLowPrice')
     
-    # Θεμελιώδη
     rev_growth = info.get('revenueGrowth', 0)
     profit_margin = info.get('profitMargins', 0)
-    fwd_pe = info.get('forwardPE', 'N/A')
     
     analysis = "### 🧠 Βαθιά Ανάλυση (Fundamental & Targets)\n\n"
     
-    # 1. Στόχοι Αναλυτών (Wall Street Consensus)
     analysis += "**🎯 Τιμές-Στόχοι (Επόμενοι 12 Μήνες):**\n"
     if target_high and target_mean and target_low:
         high_upside = ((target_high - current) / current) * 100
@@ -70,9 +67,7 @@ def generate_deep_analysis(info, current):
     else:
         analysis += "*Δεν υπάρχουν επαρκή δεδομένα αναλυτών για αυτή τη μετοχή.*\n\n"
 
-    # 2. Αξιολόγηση Θεμελιωδών (Growth & Profitability)
     analysis += "**🏢 Υγεία Εταιρείας (Fundamentals):**\n"
-    
     if rev_growth and rev_growth != "N/A":
         growth_pct = float(rev_growth) * 100
         if growth_pct > 20:
@@ -89,7 +84,7 @@ def generate_deep_analysis(info, current):
         elif margin_pct > 0:
             analysis += f"* 💵 **Κερδοφορία:** Θετικό περιθώριο κέρδους **{margin_pct:.1f}%**. Η εταιρεία είναι βιώσιμη.\n"
         else:
-            analysis += f"* 🩸 **Κερδοφορία:** Η εταιρεία αυτή τη στιγμή 'καίει' μετρητά (Περιθώριο: **{margin_pct:.1f}%**). Συνηθισμένο σε startups/high-growth, αλλά αυξάνει το ρίσκο.\n"
+            analysis += f"* 🩸 **Κερδοφορία:** Η εταιρεία αυτή τη στιγμή 'καίει' μετρητά (Περιθώριο: **{margin_pct:.1f}%**).\n"
 
     return analysis
 
@@ -100,13 +95,26 @@ ticker_pool = {
     "CryptoEV": ['COIN', 'MARA', 'RIOT', 'CLSK', 'NIO', 'XPEV', 'LI', 'PLUG', 'FCEL', 'BLINK', 'BABA', 'JD']
 }
 
-@st.cache_data(ttl=900) 
+@st.cache_data(ttl=1200) # Κρατάει τα δεδομένα 20 λεπτά για να μην ζητάει συνέχεια
 def run_scan(tickers):
     data = []
+    
+    # Μεταμφίεση του AI σε "κανονικό browser"
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    })
+    
     for t in tickers:
         try:
-            stock = yf.Ticker(t)
+            stock = yf.Ticker(t, session=session)
             info = stock.info
+            
+            # Αν τα δεδομένα είναι άδεια, αγνόησέ το
+            if not info or ('regularMarketPrice' not in info and 'currentPrice' not in info):
+                time.sleep(0.5)
+                continue
+                
             current = info.get('currentPrice', info.get('regularMarketPrice'))
             target = info.get('targetMedianPrice')
             mean_score = info.get('recommendationMean', "N/A")
@@ -118,17 +126,20 @@ def run_scan(tickers):
                     'MeanScore': mean_score, 'Info': info
                 })
         except:
-            continue
+            pass
+        
+        # Φρένο 0.5s για να μην μας μπλοκάρει το Yahoo
+        time.sleep(0.5)
+        
     return pd.DataFrame(data)
 
 # --- 2. ΚΟΥΜΠΙ TOP 3 ΕΠΙΛΟΓΩΝ ---
 st.subheader("🏆 Το Top 3 της Ημέρας (Βάσει Αναλυτών)")
 if st.button("Εμφάνισε τις Top 3 Ευκαιρίες Τώρα!", use_container_width=True):
-    with st.spinner("Σάρωση σε όλη την αγορά..."):
+    with st.spinner("Σάρωση σε όλη την αγορά (περίμενε περίπου 15-20 δευτερόλεπτα)..."):
         all_tickers = ticker_pool["Mega"] + ticker_pool["MidSmall"] + ticker_pool["CryptoEV"]
         df_all = run_scan(all_tickers)
         
-        # ΠΡΟΣΘΗΚΗ ΑΣΦΑΛΕΙΑΣ: Ελέγχουμε αν κατέβηκαν σωστά τα δεδομένα
         if not df_all.empty and 'MeanScore' in df_all.columns:
             df_all['ScoreNum'] = pd.to_numeric(df_all['MeanScore'], errors='coerce')
             top3_df = df_all[(df_all['ScoreNum'] > 0) & (df_all['ScoreNum'] <= 2.5)].sort_values(by='Upside', ascending=False).head(3)
@@ -141,17 +152,15 @@ if st.button("Εμφάνισε τις Top 3 Ευκαιρίες Τώρα!", use_c
                         st.markdown(f"**Τιμή:** ${row['Current']:.2f} &nbsp;➔&nbsp; **Στόχος:** ${row['Target']:.2f} <span style='color:#00C853; font-weight:bold; font-size:18px;'>(+{row['Upside']:.1f}%)</span>", unsafe_allow_html=True)
                         st.markdown(draw_revolut_gauge(row['MeanScore']), unsafe_allow_html=True)
                         
-                        # Αναδιπλούμενο μενού για τη βαθιά ανάλυση στο Top 3
                         with st.expander("Δες την Βαθιά Ανάλυση & Τιμές-Στόχους"):
                              st.markdown(generate_deep_analysis(row['Info'], row['Current']))
                         st.divider()
             else:
                 st.info("Δεν βρέθηκαν μετοχές με σήμα 'Buy' που να πληρούν τα κριτήρια αυτή τη στιγμή.")
         else:
-            st.error("⚠️ Προσωρινό πρόβλημα επικοινωνίας με το Yahoo Finance (δεν επέστρεψε δεδομένα). Δοκίμασε ξανά σε 1-2 λεπτά!")
+            st.error("⚠️ Το Yahoo Finance αρνείται να στείλει μαζικά δεδομένα αυτή τη στιγμή. Δοκίμασε την Ατομική Αναζήτηση παρακάτω!")
 
 st.divider()
-
 
 # --- 3. ΑΤΟΜΙΚΗ ΑΝΑΖΗΤΗΣΗ (DEEP DIVE) ---
 st.subheader("🔍 Χειροκίνητη Αναζήτηση (Deep Dive)")
@@ -160,7 +169,9 @@ search_ticker = st.text_input("Πληκτρολόγησε σύμβολο για 
 if search_ticker:
     try:
         with st.spinner("Άντληση Θεμελιωδών και Αναλύσεων Wall Street..."):
-            stock = yf.Ticker(search_ticker)
+            session = requests.Session()
+            session.headers.update({"User-Agent": "Mozilla/5.0"})
+            stock = yf.Ticker(search_ticker, session=session)
             info = stock.info
             
             current = info.get('currentPrice', info.get('regularMarketPrice', 0))
@@ -180,7 +191,6 @@ if search_ticker:
             fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=280, template="plotly_dark")
             st.plotly_chart(fig, use_container_width=True)
             
-            # Εδώ τυπώνεται η νέα, έξυπνη ανάλυση
             st.info(generate_deep_analysis(info, current))
     except:
         st.error("Δεν βρέθηκαν δεδομένα. Σιγουρέψου ότι έγραψες σωστά το σύμβολο.")
