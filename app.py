@@ -2,8 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
-import time
-import requests
+from yahooquery import Ticker as YQTicker
 
 # --- 1. UI & ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ ---
 st.set_page_config(page_title="Trading 212 AI Pro", page_icon="📊", layout="centered")
@@ -95,50 +94,54 @@ ticker_pool = {
     "CryptoEV": ['COIN', 'MARA', 'RIOT', 'CLSK', 'NIO', 'XPEV', 'LI', 'PLUG', 'FCEL', 'BLINK', 'BABA', 'JD']
 }
 
-@st.cache_data(ttl=1200) # Κρατάει τα δεδομένα 20 λεπτά για να μην ζητάει συνέχεια
-def run_scan(tickers):
+@st.cache_data(ttl=900)
+def run_scan_bulk(tickers_list):
+    # Χρήση του yahooquery για ΤΑΥΤΟΧΡΟΝΗ λήψη δεδομένων χωρίς μπλοκάρισμα!
+    t = YQTicker(tickers_list, asynchronous=True)
+    fin_data = t.financial_data
+    price_data = t.price
+    
     data = []
-    
-    # Μεταμφίεση του AI σε "κανονικό browser"
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    })
-    
-    for t in tickers:
+    for ticker in tickers_list:
         try:
-            stock = yf.Ticker(t, session=session)
-            info = stock.info
-            
-            # Αν τα δεδομένα είναι άδεια, αγνόησέ το
-            if not info or ('regularMarketPrice' not in info and 'currentPrice' not in info):
-                time.sleep(0.5)
+            # Αν το yahooquery επέστρεψε string αντί για λεξικό, σημαίνει ότι δεν βρήκε τη μετοχή
+            if isinstance(fin_data.get(ticker), str) or isinstance(price_data.get(ticker), str):
                 continue
-                
-            current = info.get('currentPrice', info.get('regularMarketPrice'))
-            target = info.get('targetMedianPrice')
-            mean_score = info.get('recommendationMean', "N/A")
+            
+            f_info = fin_data.get(ticker, {})
+            p_info = price_data.get(ticker, {})
+            
+            current = p_info.get('regularMarketPrice')
+            target = f_info.get('targetMedianPrice')
+            mean_score = f_info.get('recommendationMean', "N/A")
             
             if current and target and current > 0:
                 upside = ((target - current) / current) * 100
+                
+                # Φτιάχνουμε το "λεξικό" info για να τροφοδοτήσουμε τη συνάρτηση ανάλυσης
+                info = {
+                    'targetHighPrice': f_info.get('targetHighPrice'),
+                    'targetMeanPrice': f_info.get('targetMeanPrice'),
+                    'targetLowPrice': f_info.get('targetLowPrice'),
+                    'revenueGrowth': f_info.get('revenueGrowth'),
+                    'profitMargins': f_info.get('profitMargins')
+                }
+                
                 data.append({
-                    'Ticker': t, 'Current': current, 'Target': target, 'Upside': upside,
+                    'Ticker': ticker, 'Current': current, 'Target': target, 'Upside': upside,
                     'MeanScore': mean_score, 'Info': info
                 })
         except:
-            pass
-        
-        # Φρένο 0.5s για να μην μας μπλοκάρει το Yahoo
-        time.sleep(0.5)
-        
+            continue
+            
     return pd.DataFrame(data)
 
 # --- 2. ΚΟΥΜΠΙ TOP 3 ΕΠΙΛΟΓΩΝ ---
 st.subheader("🏆 Το Top 3 της Ημέρας (Βάσει Αναλυτών)")
 if st.button("Εμφάνισε τις Top 3 Ευκαιρίες Τώρα!", use_container_width=True):
-    with st.spinner("Σάρωση σε όλη την αγορά (περίμενε περίπου 15-20 δευτερόλεπτα)..."):
+    with st.spinner("Αστραπιαία σάρωση μέσω bulk API..."):
         all_tickers = ticker_pool["Mega"] + ticker_pool["MidSmall"] + ticker_pool["CryptoEV"]
-        df_all = run_scan(all_tickers)
+        df_all = run_scan_bulk(all_tickers)
         
         if not df_all.empty and 'MeanScore' in df_all.columns:
             df_all['ScoreNum'] = pd.to_numeric(df_all['MeanScore'], errors='coerce')
@@ -158,7 +161,7 @@ if st.button("Εμφάνισε τις Top 3 Ευκαιρίες Τώρα!", use_c
             else:
                 st.info("Δεν βρέθηκαν μετοχές με σήμα 'Buy' που να πληρούν τα κριτήρια αυτή τη στιγμή.")
         else:
-            st.error("⚠️ Το Yahoo Finance αρνείται να στείλει μαζικά δεδομένα αυτή τη στιγμή. Δοκίμασε την Ατομική Αναζήτηση παρακάτω!")
+            st.error("⚠️ Σφάλμα σύνδεσης με τα δεδομένα. Δοκίμασε την Ατομική Αναζήτηση.")
 
 st.divider()
 
@@ -169,9 +172,7 @@ search_ticker = st.text_input("Πληκτρολόγησε σύμβολο για 
 if search_ticker:
     try:
         with st.spinner("Άντληση Θεμελιωδών και Αναλύσεων Wall Street..."):
-            session = requests.Session()
-            session.headers.update({"User-Agent": "Mozilla/5.0"})
-            stock = yf.Ticker(search_ticker, session=session)
+            stock = yf.Ticker(search_ticker)
             info = stock.info
             
             current = info.get('currentPrice', info.get('regularMarketPrice', 0))
